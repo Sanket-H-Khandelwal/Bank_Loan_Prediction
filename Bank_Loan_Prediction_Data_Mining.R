@@ -19,74 +19,71 @@ library(dplyr)
 
 #Loading the data 
 getwd()
-bank<-read.csv(file.choose(), header = T)
-bank
-View(bank)
+df<-read.csv(file.choose(), header = T)
+df
+View(df)
 
 #To check the NA values
-sapply(bank,function(x){sum(is.na(x))}) # counts the number of NA values inthe dataset
+sapply(df,function(x){sum(is.na(x))}) # counts the number of NA values inthe dataset
 
-
-#Removing the unwanted column 
-bank1<-bank1[,-c(8)]
-View(bank1)
 #Converting the categorical variables to numerical variables 
-bank1$marital= factor(bank1$marital, levels = c('single','married','divorced'),labels = c(0,1,2))
-bank1$education= factor(bank1$education, levels = c('primary','secondary','tertiary'),labels = c(0,1,2))
-bank1$loan= factor(bank1$loan, levels = c('no','yes'),labels = c(0,1))
-bank1$default= factor(bank1$default, levels = c('no','yes'),labels = c(0,1))
-bank1$housing= factor(bank1$housing, levels = c('no','yes'),labels = c(0,1))
+df$Marital= factor(df$Marital, levels = c('single','married','divorced'),labels = c(0,1,2))
+df$Education= factor(df$Education, levels = c('primary','secondary','tertiary'),labels = c(0,1,2))
+df$Loan_Status= factor(df$Loan_Status, levels = c('no','yes'),labels = c(0,1))
+df$dDefault= factor(df$Default, levels = c('no','yes'),labels = c(0,1))
+df$Housing= factor(df$Housing, levels = c('no','yes'),labels = c(0,1))
 
 
 #Removing the unwanted column 
-bank1<-bank[,-c(2,9,10,11,12,13)]
-View(bank1)
-bannk<-class(bank1)
+df<-bank[,-c(2,9,10,11,12,13)]
+View(df)
+df<-class(df)
 # we will use  as. numeric() to convert a factor to a numeric vector
-bank1$age<-as.numeric(bank1$age)
-bank1$marital<-as.numeric(bank1$marital)
-bank1$education<-as.numeric(bank1$education)
-bank1$default<-as.numeric(bank1$default)
-bank1$balance<-as.numeric(bank1$balance)
-bank1$housing<-as.numeric(bank1$housing)
+df$Age<-as.numeric(df$Age)
+df$Marital<-as.numeric(df$Marital)
+df$Education<-as.numeric(df$Education)
+df$Default<-as.numeric(df$Default)
+df$Balance<-as.numeric(df$Balance)
+df$Housing<-as.numeric(df$Housing)
 
-
-
-#We will be performing min-max scaling inorder to to avoid the problem we bringthe dataset to a common scale (between 0 and 1) while keeping the distributions of variables the same
-normalize<-function(x){
-  return((x-min(x))/(max(x)-min(x)))
-}
-
-bank2<-as.data.frame(lapply(bank1[1:6],normalize))
-summary(bank2)
 
 
 #We will implement the logistic regression model
-logsts<-glm(loan~.,bank1,family = "binomial")
-summary(logsts)
-myrslts<-predict(logsts,bank1,type="response")
-myrslts
-plot(bank1$education,bank1$loan,pch=1,xlab="Education",ylab="Loan")
+#Splitting the data into train and test test
+dt = sort(sample(nrow(df), nrow(df)*.7))
+train<-data[dt,]
+test<-data[-dt,]
+View(train)
+train$Loan_Status= factor(train$Loan_Status, levels = c('N','Y'),labels = c(0,1))
 
+
+sapply(train,function(x){sum(is.na(x))}) # counts the number of NA values inthe dataset
+train$Credit_History<-ifelse(is.na(train$Credit_History),ave(train$Credit_History,FUN = function(x) mean(x,na.rm =T)),train$Credit_History)
+train$Loan_Amount_Term<-ifelse(is.na(train$Loan_Amount_Term),mode(train$Loan_Amount_Term,FUN = function(x) mean(x,na.rm =T)),train$Loan_Amount_Term)
+train$LoanAmount<-ifelse(is.na(train$LoanAmount),ave(train$LoanAmount,FUN = function(x) mean(x,na.rm =T)),train$LoanAmount)
+glm(formula = Loan_Status ~ Credit_History + Education + Self_Employed + 
+      Property_Area + LoanAmount + ApplicantIncome, family = binomial, 
+    data = trainnew)
 
 
 # We will now implement the kmeans clustering algorithm
-fit <- kmeans(bank1, 5) #5 cluster solution
-aggregate(bank1,by=list(fit$cluster),FUN=mean) #get cluster means 
-mydata1 <- data.frame(bank1, fit$cluster) #append cluster assignment
-fviz_cluster(fit, data = bank1)+ ggtitle("cluster plot with k = 5") #plot clusters
+fit <- kmeans(train, 5) #5 cluster solution
+aggregate(train,by=list(fit$cluster),FUN=mean) #get cluster means 
+mydata1 <- data.frame(train, fit$cluster) #append cluster assignment
+fviz_cluster(fit, data = train)+ ggtitle("cluster plot with k = 5") #plot clusters
+
 
 
 #Here Decision Tree algorithm is implemented
 # grow tree 
-dtree <- rpart(age~ loan+education+marital+default+balance+
-                 housing,method="class", data=bank1)
+dtree <- rpart(age~ Loan_Status+Education+Marital+Default+Balance+
+                 Credit_History,method="class", data=train)
 dtree$cptable
 plotcp(dtree)
 
 # Creating a correlation matrix
-corrplot<-corrplot(cor(bank1[c(1,2,3,6)]), type="upper", order="hclust")
-bank1<-as.numeric(bank1)
+corrplot<-corrplot(cor(train[c(1,2,3,6)]), type="upper", order="hclust")
+train<-as.numeric(train)
 
 
 
@@ -95,7 +92,6 @@ fitControl = trainControl(method = "repeatedcv", repeats = 5,
                           number = 5, verboseIter = T)
 
 # Run a Random Forest classification over the training set
-rf.fit <- train(loan ~ .,  data = bank1, method = "rf",
+rf.fit <- train(Loan_Status ~ .,  data = train, method = "rf",
                 importance = T, trControl = fitControl,
                 tuneLength = 5)
-
