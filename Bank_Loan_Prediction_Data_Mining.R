@@ -66,12 +66,6 @@ glm(formula = Loan_Status ~ Credit_History + Education + Self_Employed +
     data = trainnew)
 
 
-# We will now implement the kmeans clustering algorithm
-fit <- kmeans(train, 5) #5 cluster solution
-aggregate(train,by=list(fit$cluster),FUN=mean) #get cluster means 
-mydata1 <- data.frame(train, fit$cluster) #append cluster assignment
-fviz_cluster(fit, data = train)+ ggtitle("cluster plot with k = 5") #plot clusters
-
 
 
 #Here Decision Tree algorithm is implemented
